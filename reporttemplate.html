@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<style>
+		{{$StyleContent}}
+		</style>
+		<meta charset="utf-8">
+		<title>Check Report</title>
+	</head>
+	<body>
+		<h1>Executive Summary</h1>
+		<div id="ExecutiveSummary">
+		{{$ExecutiveSummary}}
+		</div>
+		<h1>Details</h1>
+		<div id="Details">
+		{{$TechnicalSummary}}
+		</div>
+		<h1>Example of InlinePowerShell</h1>
+		<div id="InlinePowerShell" class="CenterText">
+			<p>{{$return "This string was returned from PowerShell at $([DateTime]::Now.ToString())"$}}</p>
+			<p>{{$return @((New-Object -TypeName PSObject -Property @{This="was";Script="also"}),(New-Object -TypeName PSObject -Property @{This="returned in";Script="powershell"}))$}}</p>
+		</div>
+		<h1>Example of Inline Script Call</h1>
+		<div id="InlineScriptCall">
+			<div class="SubResult CenterText">
+				<h2>Here is an image embedded with a quick tag</h2>
+				{{LogoS.png}}
+			</div>
+			<div class="SubResult CenterText">
+				<h2>Here is the CPU Percentage example, called directly</h2>
+				<strong>{{overview-CPU.ps1:TechSummary}}</strong>
+			</div>
+		</div>
+	</body>
+</html>

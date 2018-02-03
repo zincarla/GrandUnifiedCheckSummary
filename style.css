@@ -1,0 +1,78 @@
+/*Remove body margins*/
+html, body {
+	margin: 0px;
+}
+/*Success failure, add checkmark or x next to summary headings that are good/bad*/
+#ExecutiveSummary h2.StatusSuccess::before {
+	content: "\2714  ";
+	color: green;
+}
+#ExecutiveSummary h2.StatusFailure::before {
+	content: "\274C  ";
+	color: red;
+}
+/*Shrink headings in ExecutiveSummary*/
+#ExecutiveSummary h2 {
+	font-size: 1.25em;
+}
+/*Make all headers align to center*/
+h1, h2, h3, h4, h5 {
+  width: 100%;
+  text-align: center;
+  margin-top: 0px;
+}
+/*Give heading 1 it's own background*/
+h1 {
+	background-color: lightgrey;
+}
+/*Give the top level elements a 10% margin on sides (by setting width to 80%) And ensure it stays center.*/
+#ExecutiveSummary, #Details {
+  width: 66%; /*2/3rds*/
+  margin: auto;
+}
+
+/*Table stuff*/
+table
+{
+	width: 100%;
+}
+tr
+{
+	width: 100%;
+}
+td
+{
+	background-color: #eeeeee;
+}
+tr td:first-child
+{
+	background-color: #cccccc;
+}
+th
+{
+	background-color: #999999;
+	font-weight: bold;
+}
+tr:first-child td
+{
+	background-color: #999999;
+	font-weight: bold;
+}
+/*Force divs to not grow. If the content is to big, instead allow scrolling. This is important for tables.
+The selector specifically only select those divs under the Summary headers. divs further down or up will not be affected.
+*/
+#Details div, #ExecutiveSummary div {
+	max-width: 100%;
+	overflow: auto;
+}
+/*Center image and ensure it does not grow bigger than it's max*/
+img
+{
+	max-width: 100%;
+	max-height: 100%;
+}
+/*Center aligns child objects*/
+.CenterText {
+	text-align: center;
+	width: 100%;
+}
