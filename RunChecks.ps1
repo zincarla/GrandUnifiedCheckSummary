@@ -282,6 +282,7 @@ $HTMLReport = $HTMLReport.Replace("{{`$SuccessStatus}}", $SuccessStatus)
 #region End, Save Report and e-mail
 #Write Report to disk
 $HTMLReport | Out-File -FilePath $SaveLocation
+$SaveLocation = (Get-Item -Path $SaveLocation).FullName #System.Net.Mail.Attachment does not appear to support relative paths. Unpack it.
 
 #Set an e-mail summary saying how many are good
 $Adjective = "Good"
