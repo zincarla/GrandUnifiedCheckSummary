@@ -160,6 +160,49 @@ function Convert-ToArrayTable
 
 <#
 .SYNOPSIS
+Returns an HTML table by array of objects.
+
+.DESCRIPTION
+Takes an array parameter containing objects and automatically formats an HTML <table> out of it.
+
+.PARAMETER Objects
+An array of items to add to the <table>.
+
+.PARAMETER Properties
+If null, the table will contain all properties of the objects in the table otherwise the table will contain only those properties in this parameter in order.
+
+.EXAMPLE
+Convert-ToObjArrayTable -Items @((New-Object -TypeName PSObject -Property @{Name="Test1";Status="Up";GUID="000-00-000"}), (New-Object -TypeName PSObject -Property @{Name="Test2";Status="Down";GUID="000-00-000"}))
+
+.EXAMPLE
+Convert-ToObjArrayTable -Items @((New-Object -TypeName PSObject -Property @{Name="Test1";Status="Up";GUID="000-00-000"}), (New-Object -TypeName PSObject -Property @{Name="Test2";Status="Down";GUID="000-00-000"})) -Properties @("Name", "Status")
+#>
+function Convert-ToObjArrayTable {
+    Param($Objects, $Properties)
+    if ($Properties -eq $null) {
+        $Properties = ($Objects[0] | Get-Member | Where-Object {$_.MemberType -eq "NoteProperty" -or $_.MemberType -eq "Property" -and $_.Name -notlike "__*"}).Name
+    }
+    $Headers = $Properties
+    $NewTable = @{"Headers"=$Headers}
+    $KeyI = 1
+    foreach ($Item in $Objects) {
+        $Props = @()
+        for ($I=0;$I-lt $Headers.Length;$I++) {
+            $Header = $Headers[$I]
+            if ($Item.$Header -ne $null) {
+                $Props += [System.Web.HttpUtility]::HtmlEncode($Item.$Header.ToString())
+            } else {
+                $Props += "[No information]"
+            }
+        }
+        $NewTable += @{"Row$KeyI"=$Props}
+        $KeyI++;
+    }
+    return Convert-ToHashRowTable -Table $NewTable -HeadersKey "Headers"
+}
+
+<#
+.SYNOPSIS
 Returns an HTML table by hashtable.
 
 .DESCRIPTION
@@ -388,22 +431,7 @@ function Convert-SummaryToHTML {
         }
     } elseif ($Summary.GetType().Name -eq "Object[]" -and $Summary.Length -gt 0) {
         #If an array of objects
-        $Headers = ($Summary[0] | Get-Member | Where-Object {$_.MemberType -eq "NoteProperty" -or $_.MemberType -eq "Property" -and $_.Name -notlike "__*"}).Name
-        $NewTable = @{"Headers"=$Headers}
-        $KeyI = 1
-        foreach ($Item in $Summary) {
-            $Props = @()
-            foreach ($Header in $Headers) {
-                if ($Item.$Header -ne $null) {
-                    $Props += [System.Web.HttpUtility]::HtmlEncode($Item.$Header.ToString())
-                } else {
-                    $Props += "[No information]"
-                }
-            }
-            $NewTable += @{"Row$KeyI"=$Props}
-            $KeyI++;
-        }
-        $ToReturn += Convert-ToHashRowTable -Table $NewTable -HeadersKey "Headers"
+        $ToReturn += Convert-ToObjArrayTable -Objects $Summary
     }
     else {
         #Any other object, try and get string.
@@ -594,4 +622,4 @@ function Convert-ToPSObject {
 #endregion
 
 #Export Functions
-Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject
+Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable
