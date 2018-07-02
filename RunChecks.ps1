@@ -15,7 +15,12 @@
 Push-Location -Path ($PSScriptRoot)
 
 #Import module
-Import-Module ".\ReportingSupport.psm1" -ErrorAction Stop
+#Check if module imported, if not import
+if ((Get-Module|Where-Object -FilterScript {$_.Name -eq "StigSupport"}).Count -le 0)
+{
+    Import-Module ".\ReportingSupport.psm1" -ErrorAction Stop
+}
+#Add other assemblies as needed
 Add-Type -AssemblyName "System.Web" -ErrorAction Stop
 Add-Type -AssemblyName "System.Drawing" -ErrorAction Stop
 
@@ -24,7 +29,7 @@ $EmailTo = ""
 $EmailTargets | ForEach-Object {$EmailTo+=$_+","}
 $EmailTo = $EmailTo.TrimEnd(',')
 if ([string]::IsNullOrEmpty($EmailTo.Length) -or [string]::IsNullOrEmpty($EmailFrom) -or [string]::IsNullOrEmpty($SMTPServer)) {
-    Write-Warning "A report is useless if no one looks at it. Email targets missing, EmailFrom not set, or SMTPServer is not set."
+    Write-Warning "A report is useless if no one looks at it. Email targets missing, EmailFrom not set, or SMTPServer is not set. The report will still be generated, but not e-mailed."
 }
 #Load in template
 $HTMLReport= Get-Content -Path $ReportTemplate -Raw
@@ -237,6 +242,12 @@ foreach ($Script in $ScriptTags) {
             if ($ScriptName.EndsWith(".jpg") -or $ScriptName.EndsWith(".bmp") -or $ScriptName.EndsWith(".jpeg") -or $ScriptName.EndsWith(".gif") -or $ScriptName.EndsWith(".png")) {
                 $Image = Get-Item -Path (".\Subchecks\"+$Script.SubString(2, $Script.Length -4))
                 $Content = Convert-ImageToHTML -Image ([System.Drawing.Bitmap]::FromFile($Image.FullName))
+                #Replace tag with image now as there are not variable requests with images.
+                $HTMLReport = $HTMLReport.Replace($Script, $Content)
+            }
+            if ($ScriptName.EndsWith(".svg")) {
+                $Image = Get-Item -Path (".\Subchecks\"+$Script.SubString(2, $Script.Length -4))
+                $Content = Import-SVG -PathToImage $Image.FullName
                 #Replace tag with image now as there are not variable requests with images.
                 $HTMLReport = $HTMLReport.Replace($Script, $Content)
             }

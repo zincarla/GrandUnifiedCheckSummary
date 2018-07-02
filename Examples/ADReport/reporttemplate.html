@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<style>
+		{{$StyleContent}}
+		</style>
+		<meta charset="utf-8">
+		<title>Status Report</title>
+	</head>
+	<body>
+		<h1>{{/Images/LogoS.png}} {{$return $env:USERDOMAIN$}} Overview</h1>
+		<div id="preface">This report shows general metrics and checks for the {{$return $env:USERDOMAIN$}} domain. This report was generated on {{$return (Get-Date -Format "dd-MM-yyyy")$}}. If you have issues or concerns, please verify the check, then e-mail <a href="maito:test@test.test">tech support</a></div>
+		<h2>Metrics</h2>
+		<div class="subface">
+			This section provides high-level metrics for the domain.
+		</div>
+		<div id="overviewblobs">
+			<div class="BlobContainer">
+				<div class="Blob">
+					{{/Images/users.svg}}
+					<strong>Users:</strong> {{$return (Get-ADUser -Filter {enabled -eq $true}).Count$}}
+				</div>
+				<div class="Blob">
+					{{/Images/laptop.svg}}
+					<strong>Workstations:</strong> {{$return (Get-ADComputer -Filter {operatingSystem -notlike "*server*"}).Count$}}
+				</div>
+				<div class="Blob">
+					{{/Images/display.svg}}
+					<strong>Servers:</strong> {{$return (Get-ADComputer -Filter {operatingSystem -like "*server*"}).Count$}}
+				</div>
+				<div class="Blob">
+					{{/Images/switch.svg}}
+					<strong>Pending Reboot:</strong> {{PendingReboots.ps1}}
+				</div>
+			</div>
+		</div>
+		<h2>Status</h2>
+		<div class="subface">
+			This section provides low-level status checks for different elements in the domain.
+		</div>
+		<div id="status">
+			<div id="diskspace" class="statuscard">
+				<h3>Disk Space</h3>
+				<div class="subface">
+					Any machines listed are running low on space.
+				</div>
+				<div>{{DiskSpace.ps1:TechSummary}}</div>
+			</div>
+		</div>
+		<div id="footer">Icons from <a href="https://github.com/Keyamoon">Keyamoon</a></div>
+	</body>
+</html>
