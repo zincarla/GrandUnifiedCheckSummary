@@ -14,22 +14,37 @@
 		</div>
 		<h1>Details</h1>
 		<div id="Details">
-		{{$TechnicalSummary}}
-		</div>
-		<h1>Example of InlinePowerShell</h1>
-		<div id="InlinePowerShell" class="CenterText">
-			<p>{{$return "This string was returned from PowerShell at $([DateTime]::Now.ToString())"$}}</p>
-			<p>{{$return @((New-Object -TypeName PSObject -Property @{This="was";Script="also"}),(New-Object -TypeName PSObject -Property @{This="returned in";Script="powershell"}))$}}</p>
-		</div>
-		<h1>Example of Inline Script Call</h1>
-		<div id="InlineScriptCall">
-			<div class="SubResult CenterText">
-				<h2>Here is an image embedded with a quick tag</h2>
-				{{LogoS.png}}
+			{{$TechnicalSummary}}
+			<h1>Example of InlinePowerShell</h1>
+			<div id="InlinePowerShell" class="CenterText ResultGrouping">
+				<p>{{$return "This string was returned from PowerShell at $([DateTime]::Now.ToString())"$}}</p>
+				<p>{{$return @((New-Object -TypeName PSObject -Property @{This="was";Script="also"}),(New-Object -TypeName PSObject -Property @{This="returned in";Script="powershell"}))$}}</p>
 			</div>
-			<div class="SubResult CenterText">
-				<h2>Here is the CPU Percentage example, called directly</h2>
-				<strong>{{overview-CPU.ps1:TechSummary}}</strong>
+			<h1>Example of Inline Script Call</h1>
+			<div id="InlineScriptCall" class="ResultGrouping">
+				<div class="SubResult CenterText">
+					<h2>Here is an image embedded with a quick tag</h2>
+					{{LogoS.png}}
+				</div>
+				<div class="SubResult CenterText">
+					<h2>Here is the CPU Percentage example, called directly</h2>
+					<strong>{{overview-CPU.ps1:TechSummary}}</strong>
+				</div>
+			</div>
+			<h1>Example of Bars</h1>
+			<div class="ResultGrouping">
+				<div class="SubResult CenterText">
+					<h2>Here is a series of bars</h2>
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 10) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 24) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 36) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 42) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 57) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 66) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 78) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 82) -IsTechnicalHTML $true) $}}
+					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 98) -IsTechnicalHTML $true) $}}
+				</div>
 			</div>
 		</div>
 	</body>

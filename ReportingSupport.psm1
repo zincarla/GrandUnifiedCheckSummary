@@ -619,7 +619,26 @@ function Convert-ToPSObject {
     }
     return New-Object -TypeName PSObject -Property $Props
 }
+
+<#
+.SYNOPSIS
+Returns a string with html for a loading bar-style element
+
+.PARAMETER Size
+Size of bar fill in percentage 0-100
+
+.PARAMETER Text
+Text to place on bar
+
+.EXAMPLE
+New-HTMLBar -Size 50 -Text "50% Complete"
+#>
+function New-HTMLBar {
+    Param([int]$Size=0, [string]$Text=$Size.ToString()+"%")
+    $Amnt = [Math]::Floor($Size/10)
+    return "<div class='barContainer barSize$Amnt'><div class='barFill barSize$Amnt' style='width:$Size%'></div><div class='barText barSize$Amnt'>$Text</div></div>"
+}
 #endregion
 
 #Export Functions
-Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable
+Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable, New-HTMLBar

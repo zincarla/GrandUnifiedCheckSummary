@@ -76,3 +76,53 @@ img
 	text-align: center;
 	width: 100%;
 }
+/*Make bars look better*/
+.barContainer {
+	background-color: #999999;
+	display: block;
+	text-align: center;
+	width: 100%;
+	padding: 1px;
+	box-sizing: border-box;
+	height: 1.25em;
+	position: relative;
+	margin: 2px;
+}
+
+.barFill {
+	background-color: #cccccc;
+	height:100%;
+	text-align: center;
+	display: block;
+}
+
+.barText {
+	position: absolute;
+	left: 50%;
+	top: 0px;
+}
+
+.barFill.barSize0, .barFill.barSize1, .barFill.barSize2 {
+	background-color: #ccaaaa;
+}
+.barFill.barSize3 {
+	background-color: #ce8888;
+}
+.barFill.barSize4 {
+	background-color: #ee7575;
+}
+.barFill.barSize5 {
+	background-color: #ee5555;
+}
+.barFill.barSize6 {
+	background-color: #fa3535;
+}
+.barFill.barSize7 {
+	background-color: #ff2222;
+}
+.barFill.barSize8 {
+	background-color: #ff1111;
+}
+.barFill.barSize9 {
+	background-color: #ff0000;
+}
