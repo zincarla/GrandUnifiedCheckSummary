@@ -178,7 +178,7 @@ Convert-ToObjArrayTable -Items @((New-Object -TypeName PSObject -Property @{Name
 Convert-ToObjArrayTable -Items @((New-Object -TypeName PSObject -Property @{Name="Test1";Status="Up";GUID="000-00-000"}), (New-Object -TypeName PSObject -Property @{Name="Test2";Status="Down";GUID="000-00-000"})) -Properties @("Name", "Status")
 #>
 function Convert-ToObjArrayTable {
-    Param($Objects, $Properties)
+    Param([Array]$Objects, $Properties, $Depth=0)
     if ($Properties -eq $null) {
         $Properties = ($Objects[0] | Get-Member | Where-Object {$_.MemberType -eq "NoteProperty" -or $_.MemberType -eq "Property" -and $_.Name -notlike "__*"}).Name
     }
@@ -190,7 +190,7 @@ function Convert-ToObjArrayTable {
         for ($I=0;$I-lt $Headers.Length;$I++) {
             $Header = $Headers[$I]
             if ($Item.$Header -ne $null) {
-                $Props += [System.Web.HttpUtility]::HtmlEncode($Item.$Header.ToString())
+                $Props += , $Item.$Header #Oh my god PowerShell... STOP HELPING
             } else {
                 $Props += "[No information]"
             }
@@ -198,7 +198,7 @@ function Convert-ToObjArrayTable {
         $NewTable += @{"Row$KeyI"=$Props}
         $KeyI++;
     }
-    return Convert-ToHashRowTable -Table $NewTable -HeadersKey "Headers"
+    return Convert-ToHashRowTable -Table ($NewTable) -HeadersKey "Headers" -Depth $Depth
 }
 
 <#
@@ -301,7 +301,8 @@ function Convert-ToHashRowTable
         [Parameter(Mandatory=$true)]
         [hashtable] $Table, 
         [Parameter(Mandatory=$true)]
-        $HeadersKey
+        $HeadersKey,
+        $Depth = 0
     )
     $ToReturn = ""
 	if ($Table.Keys.Count -gt 0 -and $Table.ContainsKey($HeadersKey))
@@ -327,7 +328,11 @@ function Convert-ToHashRowTable
                 {
                     if ($Count -lt $Iterations)
                     {
-                        $ToReturn+="<td>" + [System.Web.HttpUtility]::HtmlEncode($Value.ToString()) + "</td>";
+                        if ($Value.GetType().BaseType.Name -eq "Array" -and $Depth -gt 0) {
+                            $ToReturn += "<td>" + (Convert-ToObjArrayTable -Objects $Value -Depth ($Depth-1)) + "</td>";
+                        }else {
+                            $ToReturn+="<td>" + [System.Web.HttpUtility]::HtmlEncode($Value.ToString()) + "</td>";
+                        }
                         $Count++
                     }
                     else
