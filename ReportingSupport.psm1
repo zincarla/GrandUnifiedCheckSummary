@@ -437,6 +437,9 @@ function Convert-SummaryToHTML {
     } elseif ($Summary.GetType().Name -eq "Object[]" -and $Summary.Length -gt 0) {
         #If an array of objects
         $ToReturn += Convert-ToObjArrayTable -Objects $Summary
+    } elseif ($Summary.GetType().Name -eq "Object[]" -and $Summary.Length -le 0) {
+        #If an array of objects
+        $ToReturn+= "<p>"+[System.Web.HttpUtility]::HtmlEncode("No Results")+"</p>";
     }
     else {
         #Any other object, try and get string.
