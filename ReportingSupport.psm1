@@ -134,7 +134,7 @@ function New-PieChart
         $PX = $OriginX + $Radius * [Math]::Cos($Angle)
         $PY = $OriginY + $Radius * [Math]::Sin($Angle)
         $LA = 0
-        if ($Angle -gt [math]::PI) {
+        if (($Percentage * (2*[Math]::PI)) -gt [math]::PI) {
             $LA=1
         }
         $A = "$OriginX,$OriginY 0,$LA,1 $PX,$PY"
