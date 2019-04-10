@@ -43,7 +43,7 @@ Loads an SVG file into a string
 Loads an SVG file into a string, ready to be injected into an HTML file
 
 .PARAMETER Image
-The image to base-64-ify
+The SVG image to load
 
 .EXAMPLE
 Import-SVG -PathToImage "C:\Users\Reports\myimage.svg"
@@ -80,6 +80,84 @@ function Import-SVG
         }
 	}
     return $null;
+}
+
+<#
+.SYNOPSIS
+    Creates an SVG PieChart. Still could use some work, right now you should only use the height attribute.
+
+.PARAMETER DataPoints
+    Your data set. Must be an array containing items with a string Name and Numerical Value. Such as @(@{Name="Test Point";Value=14},@{Name="Test Point2";Value=24})
+
+.PARAMETER Height
+    Height of the SVG output. Width is derivative of this.
+
+.PARAMETER Width
+    Suggest not setting, but is width of SVG output.
+#>
+function New-PieChart 
+{
+    Param($DataPoints,$Height=200, $Width=1.5*$Height)
+    $SVG = "<svg height=`"$Height`" width=`"$Width`">`r`n"
+
+    $Total = 0
+    foreach ($DataPoint in $DataPoints) {
+        $Total += $DataPoint.Value
+    }
+
+    #Generate a Spread of Colors
+    $Colors = Get-ColorSpread -Amount $DataPoints.Length | Get-HexColor
+
+    #Draw Pie
+    $CurrentPercent = 0;
+    #Center of circle
+    $OriginX = $Width/3
+    $OriginY = $Height /2
+    $Radius = $OriginX #In this case, same as OriginX
+    $I =0;
+
+    for ($I=0;$I-lt $DataPoints.Length; $I++) {
+        $DataPoint = $DataPoints[$I]
+        $SVG +="`t<path d=`""
+        #GetPercentage
+        $Percentage = $DataPoint.Value / $Total
+
+        $M = "$($OriginX),$($OriginY)" #Start Point is always center of Pie
+        #Next line to current point on circle
+        $Angle = $CurrentPercent * (2*[Math]::PI)
+        $PX = $OriginX + $Radius * [Math]::Cos($Angle)
+        $PY = $OriginY + $Radius * [Math]::Sin($Angle)
+        $L = "$PX,$PY"
+        #Next Arc to other point
+        $CurrentPercent += $Percentage
+        $Angle = $CurrentPercent * (2*[Math]::PI)
+        $PX = $OriginX + $Radius * [Math]::Cos($Angle)
+        $PY = $OriginY + $Radius * [Math]::Sin($Angle)
+        $LA = 0
+        if ($Angle -gt [math]::PI) {
+            $LA=1
+        }
+        $A = "$OriginX,$OriginY 0,$LA,1 $PX,$PY"
+        
+        $SVG += "M $M L $L A $A Z`" fill=`"$($Colors[$I])`"/>`r`n"
+    }
+
+    #Draw Legend
+    $CRadius = 8
+    $Buffer = $CRadius/2
+
+    $OriginX = $Width*2/3+$CRadius+$Buffer
+    $CY = $CRadius + $Buffer
+    
+    for ($I=0;$I-lt $DataPoints.Length; $I++) {
+        $DataPoint = $DataPoints[$I]
+        $SVG += "`t<circle cx=`"$OriginX`" cy=`"$CY`" r=`"$CRadius`" fill=`"$($Colors[$I])`"/>`r`n"
+        $SVG += "`t<text x=`"$($OriginX + $CRadius + $Buffer)`" y=`"$($CY+($CRadius/2))`" fill=`"Black`">$($DataPoint.Name)</text>`r`n"
+        $CY += $Buffer + $CRadius*2
+    }
+
+    $SVG += "</svg>"
+    return $SVG
 }
 #endregion
 
@@ -374,6 +452,92 @@ function Convert-ToHTMLColorString
     )
     return $Color.R.ToString()+" , "+$Color.G.ToString()+" , "+$Color.B.ToString()
 }
+
+<#
+.SYNOPSIS
+    Converts a .NET Color object to hex format (ex, #FFaa13)
+
+.PARAMETER Color
+    Color to get Hex
+#>
+function Get-HexColor {
+    Param
+    (
+        [parameter(ValueFromPipeline)][System.Drawing.Color[]]$Color
+    )
+    Process{
+        return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")
+    }
+}
+
+<#
+.SYNOPSIS
+    Selects several colors that are spread accross the spectrum evenly.
+
+.PARAMETER Amount
+    Number of colors to generate
+#>
+function Get-ColorSpread {
+    Param($Amount)
+    $Amount++ #We increment by one, but don't return the last color since HSV loops. (0 is pretty much the same as 360)
+    $ToReturn = @()
+    for ($i=0;$i-lt $Amount-1;$i++) {
+        $ToReturn += ConvertFrom-HSV -HSVColor @{H=360/$Amount*$I; S=.8; V=.8}
+    }
+    return $ToReturn
+}
+
+<#
+.SYNOPSIS
+    Converts an HSV to a .NET Color Object (HSV->RGB)
+
+.PARAMETER HSVColor
+    Color in HSV format (Such as @{H=60;S=1;V=1})
+#>
+function ConvertFrom-HSV {
+    Param($HSVColor)
+    if ($HSVColor.S -lt 0 -or $HSVColor.S -gt 1 -or $HSVColor.V -lt 0 -or $HSVColor.V -gt 1) {
+        Write-Error "S and V should be 0-1. Values provided are outside of bounds"
+        return
+    }
+    $ToReturn = @{R=0;G=0;B=0}
+	$C = $HSVColor.S * $HSVColor.V
+	$X = $C  * (1-[Math]::Abs((($HSVColor.H/60) % 2)-1))
+	$m = $HSVColor.V - $C
+    #Fix hue to be 0-360
+	if ($HSVColor.H -lt 0 -or $HSVColor.H -gt 360 ) {
+		$HSVColor.H = $HSVColor.H%360
+	}
+	if (0-le $HSVColor.H -and $HSVColor.H -lt 60 ) {
+		$ToReturn.R = $C
+		$ToReturn.G = $X
+		$ToReturn.B = 0
+	} elseif (60-le $HSVColor.H -and $HSVColor.H -lt 120 ) {
+		$ToReturn.R = $X
+		$ToReturn.G = $C
+		$ToReturn.B = 0
+	} elseif (120-le $HSVColor.H -and $HSVColor.H -lt 180 ) {
+		$ToReturn.R = 0
+		$ToReturn.G = $C
+		$ToReturn.B = $X
+	} elseif (180-le $HSVColor.H -and $HSVColor.H -lt 240 ) {
+		$ToReturn.R = 0
+		$ToReturn.G = $X
+		$ToReturn.B = $C
+	} elseif (240-le $HSVColor.H -and $HSVColor.H -lt 300 ) {
+		$ToReturn.R = $X
+		$ToReturn.G = 0
+		$ToReturn.B = $C
+	} else {
+		$ToReturn.R = $C
+		$ToReturn.G = 0
+		$ToReturn.B = $X
+	}
+	$ToReturn.R=($ToReturn.R + $m) * 255
+	$ToReturn.G=($ToReturn.G + $m) * 255
+	$ToReturn.B=($ToReturn.B + $m) * 255
+	return [System.Drawing.Color]::FromArgb(255, $ToReturn.R, $ToReturn.G, $ToReturn.B)
+}
 #endregion
 
 #region ReportBuildingOptions
@@ -649,4 +813,4 @@ function New-HTMLBar {
 #endregion
 
 #Export Functions
-Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable, New-HTMLBar
+Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable, New-HTMLBar, Get-HexColor, Get-ColorSpread, ConvertFrom-HSV, New-PieChart
