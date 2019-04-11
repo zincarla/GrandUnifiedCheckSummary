@@ -97,7 +97,11 @@ function Import-SVG
 #>
 function New-PieChart 
 {
-    Param($DataPoints,$Height=200, $Width=1.5*$Height)
+    Param($DataPoints,$Height=200, $Width=1.5*$Height, $Colors)
+    if ($ColorList -ne $null -and $ColorList.Length -ne $DataPoints.Length) {
+        Write-Warning "Color list length does not match length of datapoints. Defaulting to normal spread."
+        $ColorList = $null
+    }
     $SVG = "<svg height=`"$Height`" width=`"$Width`">`r`n"
 
     $Total = 0
@@ -106,7 +110,9 @@ function New-PieChart
     }
 
     #Generate a Spread of Colors
-    $Colors = Get-ColorSpread -Amount $DataPoints.Length | Get-HexColor
+    if ($Colors -eq $null) {
+        $Colors = Get-ColorSpread -Amount $DataPoints.Length | Get-HexColor
+    }
 
     #Draw Pie
     $CurrentPercent = 0;
@@ -470,6 +476,17 @@ function Get-HexColor {
     }
 }
 
+function Get-CorrectedHue {
+    Param([float]$Hue)
+    if ($Hue -lt 0 -or $Hue -gt 360 ) {
+		$Hue = $Hue%360
+        if ($Hue -lt 0) {
+            $Hue += 360
+        }
+	}
+    return $Hue
+}
+
 <#
 .SYNOPSIS
     Selects several colors that are spread accross the spectrum evenly.
@@ -478,11 +495,41 @@ function Get-HexColor {
     Number of colors to generate
 #>
 function Get-ColorSpread {
-    Param($Amount)
-    $Amount++ #We increment by one, but don't return the last color since HSV loops. (0 is pretty much the same as 360)
+    Param($Amount, $HueOrigin=0, $HueSpread = 180, $HueStep = 60, [switch]$EvenSpread)
+    $HueMin = Get-CorrectedHue -Hue ($HueOrigin - $HueSpread)
+
+    $MaxOriginColors = $HueSpread*2/$HueStep
+
+    if ($HueSpread*2 -ge 360) {
+        $MaxOriginColors -=1 #Since it loops, we eliminate one color which would have been a duplicate
+    }
+
+    if ($MaxOriginColors -lt 1) {
+        $MaxOriginColors = 1
+    }
+    $MaxSatValColors = $MaxOriginColors * 7
+
     $ToReturn = @()
-    for ($i=0;$i-lt $Amount-1;$i++) {
-        $ToReturn += ConvertFrom-HSV -HSVColor @{H=360/$Amount*$I; S=.8; V=.8}
+    #Failover if we cant match colors with limited hue scope w/ sat and val
+    if ($MaxSatValColors -lt $Amount -or $EvenSpread) {
+        $Amount++ #We increment by one, but don't return the last color since HSV loops. (0 is pretty much the same as 360)
+        for ($i=0;$i-lt $Amount-1;$i++) {
+            $ToReturn += ConvertFrom-HSV -HSVColor @{H=360/$Amount*$I; S=.8; V=.8}
+        }
+    } else {
+        $Accounted =0;
+        $SatValPairs = @(@{Sat=.8;Val=.8},@{Sat=1;Val=.8},@{Sat=.8;Val=1},@{Sat=1;Val=1},@{Sat=.6;Val=.8},@{Sat=.8;Val=.6},@{Sat=.6;Val=.6})
+        foreach ($SVPair in $SatValPairs) {
+            for ($i=0;$i-lt $MaxOriginColors;$i++) {
+                $HueI = Get-CorrectedHue -Hue ($HueMin+($HueSpread*2/$MaxOriginColors*$i))
+
+                $ToReturn += ConvertFrom-HSV -HSVColor @{H=$HueI; S=$SVPair.Sat; V=$SVPair.Val}
+                $Accounted++;
+                if ($Accounted -eq $Amount) {
+                    return $ToReturn;
+                }
+            }
+        }
     }
     return $ToReturn
 }
@@ -507,6 +554,9 @@ function ConvertFrom-HSV {
     #Fix hue to be 0-360
 	if ($HSVColor.H -lt 0 -or $HSVColor.H -gt 360 ) {
 		$HSVColor.H = $HSVColor.H%360
+        if ($HSVColor.H -lt 0) {
+            $HSVColor.H += 360
+        }
 	}
 	if (0-le $HSVColor.H -and $HSVColor.H -lt 60 ) {
 		$ToReturn.R = $C
