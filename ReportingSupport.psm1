@@ -1,3 +1,4 @@
+Add-Type -Assembly System.Drawing
 #region Images
 <#
 .SYNOPSIS
@@ -97,10 +98,13 @@ function Import-SVG
 #>
 function New-PieChart 
 {
-    Param($DataPoints,$Height=200, $Width=1.5*$Height, $Colors)
+    Param($DataPoints,$Height=200, $Width=1.5*$Height, $Colors, [System.Drawing.Color]$FontColor=[System.Drawing.Color]::FromArgb(0,0,0))
     if ($ColorList -ne $null -and $ColorList.Length -ne $DataPoints.Length) {
         Write-Warning "Color list length does not match length of datapoints. Defaulting to normal spread."
         $ColorList = $null
+    }
+    if ($FontColor -eq $null) {
+        $FontColor = [System.Drawing.Color]::FromArgb(0,0,0)
     }
     $SVG = "<svg height=`"$Height`" width=`"$Width`">`r`n"
 
@@ -145,7 +149,7 @@ function New-PieChart
         }
         $A = "$OriginX,$OriginY 0,$LA,1 $PX,$PY"
         
-        $SVG += "M $M L $L A $A Z`" fill=`"$($Colors[$I])`"/>`r`n"
+        $SVG += "M $M L $L A $A Z`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></path>`r`n"
     }
 
     #Draw Legend
@@ -154,11 +158,12 @@ function New-PieChart
 
     $OriginX = $Width*2/3+$CRadius+$Buffer
     $CY = $CRadius + $Buffer
-    
+    $FontColor = $FontColor | Get-HexColor
     for ($I=0;$I-lt $DataPoints.Length; $I++) {
+        $Percentage = $DataPoint.Value / $Total
         $DataPoint = $DataPoints[$I]
-        $SVG += "`t<circle cx=`"$OriginX`" cy=`"$CY`" r=`"$CRadius`" fill=`"$($Colors[$I])`"/>`r`n"
-        $SVG += "`t<text x=`"$($OriginX + $CRadius + $Buffer)`" y=`"$($CY+($CRadius/2))`" fill=`"Black`">$($DataPoint.Name)</text>`r`n"
+        $SVG += "`t<circle cx=`"$OriginX`" cy=`"$CY`" r=`"$CRadius`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></circle>`r`n"
+        $SVG += "`t<text x=`"$($OriginX + $CRadius + $Buffer)`" y=`"$($CY+($CRadius/2))`" fill=`"$FontColor`">$($DataPoint.Name)<title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></text>`r`n"
         $CY += $Buffer + $CRadius*2
     }
 
@@ -469,10 +474,16 @@ function Convert-ToHTMLColorString
 function Get-HexColor {
     Param
     (
-        [parameter(ValueFromPipeline)][System.Drawing.Color[]]$Color
+        [parameter(ValueFromPipeline,Mandatory=$true)][System.Drawing.Color[]]$Color
     )
     Process{
-        return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")
+        if ($_){
+            return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")
+        }
+        else
+        {
+            return "#"+$Color.R.ToString("x2")+$Color.G.ToString("x2")+$Color.B.ToString("x2")
+        }
     }
 }
 
