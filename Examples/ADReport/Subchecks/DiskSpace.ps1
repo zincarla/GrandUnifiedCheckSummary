@@ -47,6 +47,10 @@ foreach($computer in $computers)
     }
 }
 
+if ($TechSummary.Length -eq 0) {
+	$TechSummary = "All drives in all servers are above their warning thresholds."
+}
+
 #Create return object
 $ToReturn = New-CheckStatus -Name "DiskSpace" -IsSuccess ($Criticals -eq 0) -TechnicalSummary $TechSummary -Summary "$Warnings Warnings and $Criticals Criticals" -IsTechnicalHTML $false -IsSummaryHTML $false
 return $ToReturn

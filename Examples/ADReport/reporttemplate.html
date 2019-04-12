@@ -5,7 +5,7 @@
 		{{$StyleContent}}
 		</style>
 		<meta charset="utf-8">
-		<title>Status Report</title>
+		<title>Status Report {{$return (Get-Date -Format "yyyy-MM-dd")$}}</title>
 	</head>
 	<body>
 		<h1>{{/Images/LogoS.png}} {{$return $env:USERDOMAIN$}} Overview</h1>
@@ -45,6 +45,24 @@
 					Any machines listed are running low on space.
 				</div>
 				<div>{{DiskSpace.ps1:TechSummary}}</div>
+			</div>
+		</div>
+		<div id="status">
+			<div id="diskspace" class="statuscard">
+				<h3>Windows 10 Expirations</h3>
+				<div class="subface">
+					See below for Windows 10 Expirations per release.
+				</div>
+				<div>{{Win10Expirey.ps1:TechSummary}}</div>
+			</div>
+		</div>
+		<div id="status">
+			<div id="diskspace" class="statuscard">
+				<h3>Windows 10 Counts</h3>
+				<div class="subface">
+					Clients and what builds they are on.
+				</div>
+				<div style="text-align: center;">{{Win10Count.ps1:Summary}}</div>
 			</div>
 		</div>
 		<div id="footer">Icons from <a href="https://github.com/Keyamoon">Keyamoon</a></div>
