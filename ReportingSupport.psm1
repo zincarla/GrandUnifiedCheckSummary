@@ -91,10 +91,10 @@ function Import-SVG
     Your data set. Must be an array containing items with a string Name and Numerical Value. Such as @(@{Name="Test Point";Value=14},@{Name="Test Point2";Value=24})
 
 .PARAMETER Height
-    Height of the SVG output. Width is derivative of this.
+    Height of the SVG tag.
 
 .PARAMETER Width
-    Suggest not setting, but is width of SVG output.
+    Width of the SVG tag.
 #>
 function New-PieChart 
 {
@@ -106,7 +106,10 @@ function New-PieChart
     if ($FontColor -eq $null) {
         $FontColor = [System.Drawing.Color]::FromArgb(0,0,0)
     }
-    $SVG = "<svg height=`"$Height`" width=`"$Width`">`r`n"
+    $SVG = "<svg viewBox=`"0 0 300 200`" height=`"$Height`" width=`"$Width`">`r`n"
+    #Change dimension to viewbox dimensions for rest of code
+    $Height = 200;
+    $Width = 300;
 
     $Total = 0
     foreach ($DataPoint in $DataPoints) {
