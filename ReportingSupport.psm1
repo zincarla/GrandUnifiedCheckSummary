@@ -85,16 +85,22 @@ function Import-SVG
 
 <#
 .SYNOPSIS
-    Creates an SVG PieChart. Still could use some work, right now you should only use the height attribute.
+    Creates an SVG PieChart.
 
 .PARAMETER DataPoints
     Your data set. Must be an array containing items with a string Name and Numerical Value. Such as @(@{Name="Test Point";Value=14},@{Name="Test Point2";Value=24})
 
+.PARAMETER Colors
+    An array of colors in HEX format. These are used as the colors in the pie chart. If null, colors will be auto-selected. @("#000000", "#ffffff", "#FF2235").
+
+.PARAMETER FontFolor
+    Color of the text, must be a system.drawing.color object.
+
 .PARAMETER Height
-    Height of the SVG tag.
+    Height of the SVG tag. 200 by default. Set to "auto" or "100%" to manipulate via CSS on parent element.
 
 .PARAMETER Width
-    Width of the SVG tag.
+    Width of the SVG tag. 300 by default. Set to "auto" or "100%" to manipulate via CSS on parent element.
 #>
 function New-PieChart 
 {
