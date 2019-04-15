@@ -160,8 +160,8 @@ function New-PieChart
     $CY = $CRadius + $Buffer
     $FontColor = $FontColor | Get-HexColor
     for ($I=0;$I-lt $DataPoints.Length; $I++) {
+    	$DataPoint = $DataPoints[$I]
         $Percentage = $DataPoint.Value / $Total
-        $DataPoint = $DataPoints[$I]
         $SVG += "`t<circle cx=`"$OriginX`" cy=`"$CY`" r=`"$CRadius`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></circle>`r`n"
         $SVG += "`t<text x=`"$($OriginX + $CRadius + $Buffer)`" y=`"$($CY+($CRadius/2))`" fill=`"$FontColor`">$($DataPoint.Name)<title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></text>`r`n"
         $CY += $Buffer + $CRadius*2
