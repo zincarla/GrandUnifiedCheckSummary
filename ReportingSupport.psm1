@@ -179,6 +179,244 @@ function New-PieChart
     $SVG += "</svg>"
     return $SVG
 }
+
+<#
+.SYNOPSIS
+    Creates an SVG LineChart or BarChart.
+
+.PARAMETER DataPoints
+    Your data set. Must be a hashtable containing items with a string Name key and Numerical Value. Such as @{"Test Point"=14;"Test Point2"=24}
+
+.PARAMETER Colors
+    An array of colors in HEX format. These are used as the colors in the chart. If null, colors will be auto-selected. @("#000000", "#ffffff", "#FF2235").
+
+.PARAMETER FontFolor
+    Color of the text in hex format
+
+.PARAMETER Height
+    Height of the SVG tag. 100% by default. Set to "auto" or "100%" to manipulate via CSS on parent element.
+
+.PARAMETER Width
+    Width of the SVG tag. 100% by default. Set to "auto" or "100%" to manipulate via CSS on parent element.
+
+.PARAMETER ChartPadding
+	 Padding between edge of view port and chart. defaults to 4
+
+.PARAMETER XAxisLabel
+	 Label for the X Axis, defaults to "X-Axis"
+
+.PARAMETER YAxisLabel
+	 Label for the Y Axis, defaults to "Y-Axis"
+
+.PARAMETER LabelPadding
+	 Padding between labels, defaults to 10
+
+.PARAMETER Line
+    Switch, draw a line chart
+
+.PARAMETER Bar
+    Switch, draw a bar chart
+
+.PARAMETER FontColor
+	 Color of all font, defaults to "#000000"
+
+.PARAMETER MaxYAxisValue
+	 Max value for the Y axis, defaults to Max value of your data points
+
+.PARAMETER MinYAxisValue
+	 Min value for the Y axis, defaults to 0
+
+.PARAMETER YAxisValueLabelCount
+	 Number of y axis value markers to draw, defaults to 4+(($DataPoints.Count-4)/2))
+
+.PARAMETER BackgroundColor
+	 Color of the chart background, defaults to "#FFFFFF"
+
+.PARAMETER AxisColor
+	 Color of the Axis lines, defaults to "#000000"
+
+.PARAMETER MainLineColor
+	 Color of the data line for a line chart, defaults to "#000000"
+
+.PARAMETER Dots
+    Draw dots, combine with Line parameter for most readability
+
+.PARAMETER DotRadius
+	 Size of the dots to draw, defaults to 6
+
+.EXAMPLE
+    $DataPoints = @{"Test1"=35; "Test2"=53;"Test3"=70;"Test4"="18"}; New-LineBarChart -DataPoints $DataPoints -Bar
+
+.EXAMPLE
+    New-LineBarChart -DataPoints $DataPoints -BackgroundColor "#FFFFFF99" -FontColor "#000000" -AxisColor "#000000" -Line -MainLineColor "#333333"
+#>
+function New-LineBarChart {
+    Param(
+        $Width="100%",
+        $Height="100%",
+        $ChartPadding=4,
+        $DataPoints,
+        $XAxisLabel="X-Axis",
+        $YAxisLabel="Y-Axis",
+        $LabelPadding =10,
+        [switch]$Line,
+        [switch]$Bar,
+        $Colors,
+        $FontColor="#000000",
+        $MaxYAxisValue = ($DataPoints.Values | Sort-Object -Descending)[0],
+        $MinYAxisValue = 0,
+        $YAxisValueLabelCount = [System.Math]::Floor( 4+(($DataPoints.Count-4)/2)),
+        $BackgroundColor = "#FFFFFF",
+        $AxisColor = "#000000",
+        $MainLineColor = "#000000",
+        [switch]$Dots,
+        $DotRadius=6
+    )
+    if ($YAxisValueLabelCount -lt 2) {
+        $YAxisValueLabelCount = 2;
+    }
+    $FontHeight = 10 #Assumed guess
+    $FontWidth = 7 #Assumed guess
+
+    $AxisLinePadding=10
+    $AxisLabelPadding=$FontHeight*2+$LabelPadding*3
+
+    $DataKeys = $DataPoints.Keys | Sort-Object
+    $MaxXAxisLabelLength = ($DataKeys | Sort-Object -Property Length -Descending)[0].Length
+
+    $ViewBoxWidth = $ChartPadding+$AxisLinePadding+$AxisLabelPadding+($DataPoints.Keys.Count)*($MaxXAxisLabelLength*$FontWidth+$LabelPadding)
+    $ViewBoxHeight = $ChartPadding+$AxisLinePadding+$AxisLabelPadding+($LabelPadding+$FontHeight)*$YAxisValueLabelCount
+
+
+
+    #Calculate Y Axis Labels
+    $YAxisLabels = @([double]$MinYAxisValue)
+    if ($YAxisValueLabelCount -gt 2) {
+        $YSpread = ($MaxYAxisValue - $MinYAxisValue) / ($YAxisValueLabelCount-1)
+        for ($I=0; $I -lt $YAxisValueLabelCount-2; $I++) {
+            $YAxisLabels += @($YAxisLabels[$YAxisLabels.Length-1]+$YSpread)
+        }
+    }
+    $YAxisLabels += @([double]$MaxYAxisValue)
+    $YAxisLabels = $YAxisLabels | Sort-Object -Descending
+
+
+    #Important Measurements
+    $ChartAreaHeight = $ViewBoxHeight-$ChartPadding-$AxisLinePadding-$AxisLabelPadding
+    $ChartAreaWidth = $ViewBoxWidth-$ChartPadding-$AxisLinePadding-$AxisLabelPadding
+
+    #Generate a Spread of Colors
+    if ($Colors -eq $null -or $Colors.Count -lt $DataPoints.Count) {
+        if ($Colors -ne $null -and $Colors.Count -lt $DataPoints.Count) {
+            Write-Warning "Not enough colors provided. Colors will be auto-generated."
+        }
+        $Colors = Get-ColorSpread -Amount $DataPoints.Count | Get-HexColor
+    }
+
+    $SVG = "<svg viewBox=`"0 0 $ViewBoxWidth $ViewBoxHeight`" height=`"$Height`" width=`"$Width`">`r`n"
+
+    #Draw BG
+    $SVG += "`t<rect x=`"$($ChartPadding/2)`" y=`"$($ChartPadding/2)`" width=`"$($ViewBoxWidth-$ChartPadding)`" height=`"$($ViewBoxHeight-$ChartPadding)`" style=`"fill:$BackgroundColor;stroke-width:1;`" />`r`n"
+
+    #Draw Y Axis Scale Lines and Labels
+    
+    $CurrentX = $AxisLabelPadding+$($ChartPadding/2)
+    $CurrentY = $AxisLinePadding+$ChartPadding/2
+    $EndX = $CurrentX+$ChartAreaWidth
+    $Spacing = $ChartAreaHeight / ($YAxisLabels.Count-1)
+    for ($I=0; $I-lt $YAxisLabels.Count; $I++) {
+        $LabelText = $YAxisLabels[$I].ToString("N0")
+        $SVG += "`t<line x1=`"$CurrentX`" y1=`"$CurrentY`" x2=`"$EndX`" y2=`"$CurrentY`" style=`"stroke:$AxisColor;stroke-width:1;stroke-dasharray:5;`" />`r`n"
+        $SVG += "`t<text x=`"$($CurrentX-($LabelText.Length*$FontWidth)-$LabelPadding)`" y=`"$($CurrentY+$FontHeight/2)`" fill=`"$FontColor`">$LabelText</text>`r`n"
+        
+        $CurrentY+=$Spacing
+    }
+
+    #Draw X Axis Scale Labels
+
+    $CurrentY = $AxisLinePadding+$ChartPadding+$ChartAreaHeight+$LabelPadding+$FontHeight
+    for ($I=0; $I -lt $DataKeys.Count; $I++) {
+        #XAxisStartX+(XAxisWidth/XLabelCount/2)+(XAxisWidth/XLabelCount)*ItemIndex
+        $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I-($DataKeys[$I].Length*$FontWidth/2)
+        $SVG+="`t<text x=`"$CurrentX`" y=`"$CurrentY`" fill=`"$FontColor`">$($DataKeys[$I])<title>$($DataPoints[$DataKeys[$I]])</title></text>`r`n"
+    }
+
+    #Draw Main Chart Labels
+
+	$SVG+="`t<text x=`"$($LabelPadding+$ChartPadding+$FontHeight)`" y=`"$($ViewBoxHeight/2+$YAxisLabel.Length*$FontWidth/2)`" fill=`"$FontColor`" transform=`"rotate(270 $($LabelPadding+$ChartPadding+$FontHeight),$($ViewBoxHeight/2+$YAxisLabel.Length*$FontWidth/2))`">$YAxisLabel</text>`r`n"
+	$SVG+="`t<text x=`"$($ViewBoxWidth/2-$XAxisLabel.Length*$FontWidth/2)`" y=`"$($ViewBoxHeight-$ChartPadding/2-$LabelPadding)`" fill=`"$FontColor`">$XAxisLabel</text>`r`n"
+
+    #Draw Bars if requested
+    if ($Bar) {
+        $BarWidth = $ChartAreaWidth/$DataKeys.Length
+        for ($I=0; $I-lt $DataKeys.Length; $I++) {
+            $OutLineColor = Get-ColorFromHex -Color $Colors[$I]
+            $OutLineColor = Get-HexColor -Color ([System.Drawing.Color]::FromArgb(255,$OutLineColor.R/2, $OutLineColor.G/2, $OutLineColor.B/2))
+            $BarHeight = ($DataPoints[$DataKeys[$I]]-$MinYAxisValue)*($ChartAreaHeight/($MaxYAxisValue-$MinYAxisValue))
+            if ($BarHeight -lt 0) {
+                $BarHeight = 1;
+                Write-Warning "Chart scale is incorrect. Please select a minimum Y axis that can support $DataKeys[$I]"
+            }
+            if ($BarHeight -gt ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)) {
+                $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
+                Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
+            }
+            $SVG+="`t<rect x=`"$($AxisLabelPadding+$($ChartPadding/2)+$BarWidth*$I)`" y=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)`" width=`"$BarWidth`" height=`"$BarHeight`" style=`"fill:$($Colors[$I]);stroke-width:1;stroke:$OutLineColor`"><title>$($DataPoints[$DataKeys[$I]])</title></rect>`r`n"
+        }
+    }
+
+    #Draw Line if requested
+    if ($Line -or $Dots) {
+        $LineCircleLocations = @()
+        $I=0;
+        $BarHeight = ($DataPoints[$DataKeys[$I]]-$MinYAxisValue)*($ChartAreaHeight/($MaxYAxisValue-$MinYAxisValue))
+        if ($BarHeight -lt 0) {
+                $BarHeight = 1;
+                Write-Warning "Chart scale is incorrect. Please select a minimum Y axis that can support $DataKeys[$I]"
+            }
+            if ($BarHeight -gt ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)) {
+                $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
+                Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
+            }
+        $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
+        $FullLinePath = "M $CurrentX,$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)"
+        $LineCircleLocations +=@{X=$CurrentX;Y=$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)}
+        for ($I=1; $I -lt $DataKeys.Length; $I++) {
+            $BarHeight = ($DataPoints[$DataKeys[$I]]-$MinYAxisValue)*($ChartAreaHeight/($MaxYAxisValue-$MinYAxisValue))
+            if ($BarHeight -lt 0) {
+                $BarHeight = 1;
+                Write-Warning "Chart scale is incorrect. Please select a minimum Y axis that can support $DataKeys[$I]"
+            }
+            if ($BarHeight -gt ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)) {
+                $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
+                Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
+            }
+            $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
+            $FullLinePath+= " L $CurrentX,$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)"
+            $LineCircleLocations +=@{X=$CurrentX;Y=$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)}
+        }
+        if ($Line) {
+            $SVG+="`t<path d=`"$FullLinePath`" style=`"fill:none;stroke-width:2;stroke:$MainLineColor`" />`r`n"
+        }
+    }
+    if ($Dots) {
+        $I=0;
+        for ($I=0; $I -lt $DataKeys.Count; $I++) {
+            $OutLineColor = Get-ColorFromHex -Color $Colors[$I]
+            $OutLineColor = Get-HexColor -Color ([System.Drawing.Color]::FromArgb(255,$OutLineColor.R/2, $OutLineColor.G/2, $OutLineColor.B/2))
+            $SVG+="`t<circle cx=`"$($LineCircleLocations[$I].X)`" cy=`"$($LineCircleLocations[$I].Y)`" r=`"$DotRadius`" stroke=`"$OutLineColor`" stroke-width=`"1`" fill=`"$($Colors[$I])`"><title>$($DataPoints[$DataKeys[$I]])</title></circle>`r`n"
+        }
+        
+    }
+
+    #Draw Main Chart Axis Boundary Lines
+    
+	$SVG+="`t<line x1=`"$($AxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding)`" x2=`"$($AxisLabelPadding+$ChartPadding/2)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
+	$SVG+="`t<line x1=`"$($AxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" x2=`"$($AxisLabelPadding+$ChartPadding/2+$ChartAreaWidth)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
+
+    $SVG += "</svg>"
+    return $SVG
+}
 #endregion
 
 #region Table functions
@@ -487,11 +725,45 @@ function Get-HexColor {
     )
     Process{
         if ($_){
-            return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")
+            return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")+$_.A.ToString("x2")
         }
         else
         {
-            return "#"+$Color.R.ToString("x2")+$Color.G.ToString("x2")+$Color.B.ToString("x2")
+            return "#"+$Color.R.ToString("x2")+$Color.G.ToString("x2")+$Color.B.ToString("x2")+$Color.A.ToString("x2")
+        }
+    }
+}
+
+<#
+.SYNOPSIS
+    Converts a hex format color to a .net color object (ex, #FFaa13)
+
+.PARAMETER Color
+    Hex color to get color
+#>
+function Get-ColorFromHex {
+    Param
+    (
+        [parameter(ValueFromPipeline,Mandatory=$true)][string[]]$Color
+    )
+    Process{
+        $ToProcess = $null
+        if ($_){
+            $ToProcess = $_
+        } else {
+           $ToProcess = $Color[0] 
+        }
+        if ($ToProcess -match "^\#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$") {
+            return [System.Drawing.Color]::FromArgb(255,[Int]::Parse($Matches[1], [System.Globalization.NumberStyles]::HexNumber), 
+                [Int]::Parse($Matches[2], [System.Globalization.NumberStyles]::HexNumber),
+                [Int]::Parse($Matches[3], [System.Globalization.NumberStyles]::HexNumber))
+        } elseif ($ToProcess -match "^\#([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})$") {
+            return [System.Drawing.Color]::FromArgb([Int]::Parse($Matches[4], [System.Globalization.NumberStyles]::HexNumber),
+                [Int]::Parse($Matches[1], [System.Globalization.NumberStyles]::HexNumber), 
+                [Int]::Parse($Matches[2], [System.Globalization.NumberStyles]::HexNumber),
+                [Int]::Parse($Matches[3], [System.Globalization.NumberStyles]::HexNumber))
+        } else {
+            Write-Error "$ToProcess is not a valid hex color (#AA22FF format)"
         }
     }
 }
@@ -883,4 +1155,6 @@ function New-HTMLBar {
 #endregion
 
 #Export Functions
-Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable, New-HTMLBar, Get-HexColor, Get-ColorSpread, ConvertFrom-HSV, New-PieChart
+Export-ModuleMember -Function Convert-ImageToHTML, Import-SVG, Convert-ToArrayTable, Convert-ToHashColumnTable, Convert-ToHashRowTable, Convert-ToHTMLColorString, 
+ Convert-SummaryToHTML, New-CheckStatus, Convert-ToPSObject, Convert-ToObjArrayTable, New-HTMLBar, Get-HexColor, Get-ColorFromHex, Get-ColorSpread, ConvertFrom-HSV,
+ New-PieChart, New-LineBarChart
