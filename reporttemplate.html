@@ -6,6 +6,9 @@
 		</style>
 		<meta charset="utf-8">
 		<title>Check Report</title>
+		<script>
+		{{TableSort.js}}
+		</script>
 	</head>
 	<body>
 		<h1>Executive Summary</h1>
@@ -33,7 +36,7 @@
 			</div>
 			<h1>Example of Bars</h1>
 			<div class="ResultGrouping">
-				<div class="SubResult CenterText">
+				<div class="SubResult CenterText" style="overflow:hidden;">
 					<h2>Here is a series of bars</h2>
 					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 10) -IsTechnicalHTML $true) $}}
 					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 24) -IsTechnicalHTML $true) $}}
@@ -45,6 +48,24 @@
 					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 82) -IsTechnicalHTML $true) $}}
 					{{$return (New-CheckStatus -Name "BarExample" -IsSuccess $true -TechnicalSummary (New-HTMLBar -Size 98) -IsTechnicalHTML $true) $}}
 				</div>
+			</div>
+			<h1>Example of PieChart</h1>
+			<div class="ResultGrouping">
+				<div class="SubResult CenterText">
+					<h2>PieChart showing fake statistics</h2>
+					{{$ $DataPoints=@(@{Name="DataPoint1";Value=15;},@{Name="DataPoint1";Value=15;},@{Name="DataPoint1";Value=30;}); return (New-CheckStatus -Name "PieChart" -IsSuccess $true -TechnicalSummary (New-PieChart -DataPoints $DataPoints) -IsTechnicalHTML $true) $}}
+			</div>
+			<h1>Example of BarChart</h1>
+			<div class="ResultGrouping">
+				<div class="SubResult CenterText">
+					<h2>BarChart showing fake statistics</h2>
+					{{$ $DataPoints=@{"Point1"=50;"Point2"=30;"Point3"="77";"Point4"=8;"Point5"=41}; return (New-CheckStatus -Name "BarChart" -IsSuccess $true -TechnicalSummary (New-LineBarChart -DataPoints $DataPoints -Bar -XAxisLabel "Some Data Points" -YAxisLabel "Arbitrary Numbers" -Width "50%") -IsTechnicalHTML $true) $}}
+			</div>
+			<h1>Example of LineChart</h1>
+			<div class="ResultGrouping">
+				<div class="SubResult CenterText">
+					<h2>LineChart showing fake statistics</h2>
+					{{$ $DataPoints=@{"Point1"=50;"Point2"=30;"Point3"="77";"Point4"=8;"Point5"=41}; return (New-CheckStatus -Name "LineChart" -IsSuccess $true -TechnicalSummary (New-LineBarChart -DataPoints $DataPoints -Line -Dots -XAxisLabel "Some Data Points" -YAxisLabel "Arbitrary Numbers" -Width "50%") -IsTechnicalHTML $true) $}}
 			</div>
 		</div>
 	</body>

@@ -251,6 +251,11 @@ foreach ($Script in $ScriptTags) {
                 #Replace tag with image now as there are not variable requests with images.
                 $HTMLReport = $HTMLReport.Replace($Script, $Content)
             }
+            #If it is a text based file, directly embed it
+            if ($ScriptName.EndsWith(".txt") -or $ScriptName.EndsWith(".html") -or $ScriptName.EndsWith(".json") -or $ScriptName.EndsWith(".js") -or $ScriptName.EndsWith(".css")) {
+                $Content = Get-Content -Path (Get-Item -Path (".\Subchecks\"+$Script.SubString(2, $Script.Length -4))).FullName -Raw
+                $HTMLReport = $HTMLReport.Replace($Script, $Content)
+            }
         }
     }
 }
