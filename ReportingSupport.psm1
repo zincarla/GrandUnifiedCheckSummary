@@ -82,7 +82,9 @@ function Import-SVG
 	}
     return $null;
 }
+#endregion
 
+#region Charts
 <#
 .SYNOPSIS
     Creates an SVG PieChart.
@@ -258,7 +260,7 @@ function New-LineBarChart {
         $DataPoints,
         $XAxisLabel="X-Axis",
         $YAxisLabel="Y-Axis",
-        $LabelPadding =10,
+        $LabelPadding =5,
         [switch]$Line,
         [switch]$Bar,
         $Colors,
@@ -270,24 +272,13 @@ function New-LineBarChart {
         $AxisColor = "#000000",
         $MainLineColor = "#000000",
         [switch]$Dots,
-        $DotRadius=6
+        $DotRadius=6,
+        $ManualXLabelPadding=0,
+        $ManualYLabelPadding=0
     )
     if ($YAxisValueLabelCount -lt 2) {
         $YAxisValueLabelCount = 2;
     }
-    $FontHeight = 10 #Assumed guess
-    $FontWidth = 7 #Assumed guess
-
-    $AxisLinePadding=10
-    $AxisLabelPadding=$FontHeight*2+$LabelPadding*3
-
-    $DataKeys = $DataPoints.Keys | Sort-Object
-    $MaxXAxisLabelLength = ($DataKeys | Sort-Object -Property Length -Descending)[0].Length
-
-    $ViewBoxWidth = $ChartPadding+$AxisLinePadding+$AxisLabelPadding+($DataPoints.Keys.Count)*($MaxXAxisLabelLength*$FontWidth+$LabelPadding)
-    $ViewBoxHeight = $ChartPadding+$AxisLinePadding+$AxisLabelPadding+($LabelPadding+$FontHeight)*$YAxisValueLabelCount
-
-
 
     #Calculate Y Axis Labels
     $YAxisLabels = @([double]$MinYAxisValue)
@@ -300,10 +291,26 @@ function New-LineBarChart {
     $YAxisLabels += @([double]$MaxYAxisValue)
     $YAxisLabels = $YAxisLabels | Sort-Object -Descending
 
+    #General Chart Sizing
+
+    $FontHeight = 14 #Assumed guess
+    $FontWidth = 8.2 #Assumed guess
+
+    $AxisLinePadding=10
+    $XAxisLabelPadding=$FontHeight*2+$LabelPadding*3+$ManualXLabelPadding
+    
+
+    $DataKeys = $DataPoints.Keys | Sort-Object
+    $MaxXAxisLabelLength = ($DataKeys | Sort-Object -Property Length -Descending)[0].Length
+    $MaxYAxisLabelLength = (($YAxisLabels | foreach-object {$_.ToString("N0").Length}) | Sort-Object -Descending)[0]
+    $YAxisLabelPadding= $MaxYAxisLabelLength*$FontWidth+$LabelPadding*2+$ManualYLabelPadding+$FontHeight
+
+    $ViewBoxWidth = $ChartPadding+$AxisLinePadding+$YAxisLabelPadding+($DataPoints.Keys.Count)*($MaxXAxisLabelLength*$FontWidth+$LabelPadding)
+    $ViewBoxHeight = $ChartPadding+$AxisLinePadding+$XAxisLabelPadding+($LabelPadding+$FontHeight)*$YAxisValueLabelCount
 
     #Important Measurements
-    $ChartAreaHeight = $ViewBoxHeight-$ChartPadding-$AxisLinePadding-$AxisLabelPadding
-    $ChartAreaWidth = $ViewBoxWidth-$ChartPadding-$AxisLinePadding-$AxisLabelPadding
+    $ChartAreaHeight = $ViewBoxHeight-$ChartPadding-$AxisLinePadding-$XAxisLabelPadding
+    $ChartAreaWidth = $ViewBoxWidth-$ChartPadding-$AxisLinePadding-$YAxisLabelPadding
 
     #Generate a Spread of Colors
     if ($Colors -eq $null -or $Colors.Count -lt $DataPoints.Count) {
@@ -320,14 +327,14 @@ function New-LineBarChart {
 
     #Draw Y Axis Scale Lines and Labels
     
-    $CurrentX = $AxisLabelPadding+$($ChartPadding/2)
+    $CurrentX = $YAxisLabelPadding+$($ChartPadding/2)
     $CurrentY = $AxisLinePadding+$ChartPadding/2
     $EndX = $CurrentX+$ChartAreaWidth
     $Spacing = $ChartAreaHeight / ($YAxisLabels.Count-1)
     for ($I=0; $I-lt $YAxisLabels.Count; $I++) {
         $LabelText = $YAxisLabels[$I].ToString("N0")
         $SVG += "`t<line x1=`"$CurrentX`" y1=`"$CurrentY`" x2=`"$EndX`" y2=`"$CurrentY`" style=`"stroke:$AxisColor;stroke-width:1;stroke-dasharray:5;`" />`r`n"
-        $SVG += "`t<text x=`"$($CurrentX-($LabelText.Length*$FontWidth)-$LabelPadding)`" y=`"$($CurrentY+$FontHeight/2)`" fill=`"$FontColor`">$LabelText</text>`r`n"
+        $SVG += "`t<text x=`"$($CurrentX-$LabelPadding)`" text-anchor=`"end`" y=`"$($CurrentY+$FontHeight/2)`" fill=`"$FontColor`">$LabelText</text>`r`n"
         
         $CurrentY+=$Spacing
     }
@@ -337,8 +344,8 @@ function New-LineBarChart {
     $CurrentY = $AxisLinePadding+$ChartPadding+$ChartAreaHeight+$LabelPadding+$FontHeight
     for ($I=0; $I -lt $DataKeys.Count; $I++) {
         #XAxisStartX+(XAxisWidth/XLabelCount/2)+(XAxisWidth/XLabelCount)*ItemIndex
-        $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I-($DataKeys[$I].Length*$FontWidth/2)
-        $SVG+="`t<text x=`"$CurrentX`" y=`"$CurrentY`" fill=`"$FontColor`">$($DataKeys[$I])<title>$($DataPoints[$DataKeys[$I]])</title></text>`r`n"
+        $CurrentX = $YAxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
+        $SVG+="`t<text x=`"$CurrentX`" text-anchor=`"middle`" y=`"$CurrentY`" fill=`"$FontColor`">$($DataKeys[$I])<title>$($DataPoints[$DataKeys[$I]])</title></text>`r`n"
     }
 
     #Draw Main Chart Labels
@@ -361,7 +368,7 @@ function New-LineBarChart {
                 $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
                 Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
             }
-            $SVG+="`t<rect x=`"$($AxisLabelPadding+$($ChartPadding/2)+$BarWidth*$I)`" y=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)`" width=`"$BarWidth`" height=`"$BarHeight`" style=`"fill:$($Colors[$I]);stroke-width:1;stroke:$OutLineColor`"><title>$($DataPoints[$DataKeys[$I]])</title></rect>`r`n"
+            $SVG+="`t<rect x=`"$($YAxisLabelPadding+$($ChartPadding/2)+$BarWidth*$I)`" y=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)`" width=`"$BarWidth`" height=`"$BarHeight`" style=`"fill:$($Colors[$I]);stroke-width:1;stroke:$OutLineColor`"><title>$($DataPoints[$DataKeys[$I]])</title></rect>`r`n"
         }
     }
 
@@ -378,7 +385,7 @@ function New-LineBarChart {
                 $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
                 Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
             }
-        $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
+        $CurrentX = $YAxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
         $FullLinePath = "M $CurrentX,$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)"
         $LineCircleLocations +=@{X=$CurrentX;Y=$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)}
         for ($I=1; $I -lt $DataKeys.Length; $I++) {
@@ -391,7 +398,7 @@ function New-LineBarChart {
                 $BarHeight = ($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight);
                 Write-Warning "Chart scale is incorrect. Please select a maximum Y axis that can support $DataKeys[$I]"
             }
-            $CurrentX = $AxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
+            $CurrentX = $YAxisLabelPadding+$($ChartPadding/2)+($ChartAreaWidth/$DataKeys.Count/2)+($ChartAreaWidth/$DataKeys.Count)*$I
             $FullLinePath+= " L $CurrentX,$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)"
             $LineCircleLocations +=@{X=$CurrentX;Y=$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight-$BarHeight)}
         }
@@ -399,6 +406,12 @@ function New-LineBarChart {
             $SVG+="`t<path d=`"$FullLinePath`" style=`"fill:none;stroke-width:2;stroke:$MainLineColor`" />`r`n"
         }
     }
+    #Draw Main Chart Axis Boundary Lines
+    
+	$SVG+="`t<line x1=`"$($YAxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding)`" x2=`"$($YAxisLabelPadding+$ChartPadding/2)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
+	$SVG+="`t<line x1=`"$($YAxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" x2=`"$($YAxisLabelPadding+$ChartPadding/2+$ChartAreaWidth)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
+
+    #If draw dots
     if ($Dots) {
         $I=0;
         for ($I=0; $I -lt $DataKeys.Count; $I++) {
@@ -409,10 +422,6 @@ function New-LineBarChart {
         
     }
 
-    #Draw Main Chart Axis Boundary Lines
-    
-	$SVG+="`t<line x1=`"$($AxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding)`" x2=`"$($AxisLabelPadding+$ChartPadding/2)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
-	$SVG+="`t<line x1=`"$($AxisLabelPadding+$ChartPadding/2)`" y1=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" x2=`"$($AxisLabelPadding+$ChartPadding/2+$ChartAreaWidth)`" y2=`"$($ChartPadding/2+$AxisLinePadding+$ChartAreaHeight)`" style=`"stroke:$AxisColor;stroke-width:3`" />`r`n"
 
     $SVG += "</svg>"
     return $SVG
@@ -737,8 +746,9 @@ function Get-HexColor {
         }
         $ToReturn = "#"+$ToProcess.R.ToString("x2")+$ToProcess.G.ToString("x2")+$ToProcess.B.ToString("x2")
         if ($IncludeAlpha) {
-            $ToProcess=$ToReturn+$ToProcess.A.ToString("x2")
+            $ToReturn=$ToReturn+$ToProcess.A.ToString("x2")
         }
+        return $ToReturn
     }
 }
 
