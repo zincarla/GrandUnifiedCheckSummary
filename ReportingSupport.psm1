@@ -717,19 +717,27 @@ function Convert-ToHTMLColorString
 
 .PARAMETER Color
     Color to get Hex
+
+.PARAMETER IncludeAlpha
+    Includes the alpha value at the end of the hex (#000000FF)
 #>
 function Get-HexColor {
     Param
     (
-        [parameter(ValueFromPipeline,Mandatory=$true)][System.Drawing.Color[]]$Color
+        [parameter(ValueFromPipeline,Mandatory=$true)][System.Drawing.Color[]]$Color, [switch]$IncludeAlpha
     )
     Process{
+        $ToProcess = $null;
         if ($_){
-            return "#"+$_.R.ToString("x2")+$_.G.ToString("x2")+$_.B.ToString("x2")+$_.A.ToString("x2")
+            $ToProcess = $_
         }
         else
         {
-            return "#"+$Color.R.ToString("x2")+$Color.G.ToString("x2")+$Color.B.ToString("x2")+$Color.A.ToString("x2")
+            $ToProcess = $Color[0]
+        }
+        $ToReturn = "#"+$ToProcess.R.ToString("x2")+$ToProcess.G.ToString("x2")+$ToProcess.B.ToString("x2")
+        if ($IncludeAlpha) {
+            $ToProcess=$ToReturn+$ToProcess.A.ToString("x2")
         }
     }
 }
@@ -768,6 +776,7 @@ function Get-ColorFromHex {
     }
 }
 
+#Helper Function
 function Get-CorrectedHue {
     Param([float]$Hue)
     if ($Hue -lt 0 -or $Hue -gt 360 ) {
