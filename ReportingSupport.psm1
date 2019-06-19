@@ -137,30 +137,48 @@ function New-PieChart
     $Radius = $OriginX #In this case, same as OriginX
     $I =0;
 
-    for ($I=0;$I-lt $DataPoints.Length; $I++) {
-        $DataPoint = $DataPoints[$I]
-        $SVG +="`t<path d=`""
-        #GetPercentage
-        $Percentage = $DataPoint.Value / $Total
-
-        $M = "$($OriginX),$($OriginY)" #Start Point is always center of Pie
-        #Next line to current point on circle
-        $Angle = $CurrentPercent * (2*[Math]::PI)
-        $PX = $OriginX + $Radius * [Math]::Cos($Angle)
-        $PY = $OriginY + $Radius * [Math]::Sin($Angle)
-        $L = "$PX,$PY"
-        #Next Arc to other point
-        $CurrentPercent += $Percentage
-        $Angle = $CurrentPercent * (2*[Math]::PI)
-        $PX = $OriginX + $Radius * [Math]::Cos($Angle)
-        $PY = $OriginY + $Radius * [Math]::Sin($Angle)
-        $LA = 0
-        if (($Percentage * (2*[Math]::PI)) -gt [math]::PI) {
-            $LA=1
+   #Edge Case, if there is only 1 data point with values, just draw a circle.
+    #PowerShell, STOP HELPING, I want an array! If you don't manually cast this, powershell decides to be "helpful" and just returns the object.
+    if ((@()+($DataPoints | Where-Object {$_.Value -gt 0})).Length -eq 1) {
+        for ($I=0;$I-lt $DataPoints.Length; $I++) {
+            #Even though we only have on point with value, loop through all to ensure color match
+            $DataPoint = $DataPoints[$I]
+            if ($DataPoint.Value -gt 0) {
+                #GetPercentage
+                $Percentage = $DataPoint.Value / $Total
+                $SVG += "`t<circle cx=`"$($OriginX)`" cy=`"$($OriginY)`" r=`"$Radius`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></circle>"
+                break;
+            }
         }
-        $A = "$OriginX,$OriginY 0,$LA,1 $PX,$PY"
+    }elseif ((@()+($DataPoints | Where-Object {$_.Value -gt 0})).Length -eq 0) {
+        #Edge case, No data
+        $SVG+="`t<text x=`"$OriginX`" text-anchor=`"middle`" y=`"$OriginY`" fill=`"#999999`">No Data</text>`r`n"
+    } else {
+        for ($I=0;$I-lt $DataPoints.Length; $I++) {
+            $DataPoint = $DataPoints[$I]
+            $SVG +="`t<path d=`""
+            #GetPercentage
+            $Percentage = $DataPoint.Value / $Total
+
+            $M = "$($OriginX),$($OriginY)" #Start Point is always center of Pie
+            #Next line to current point on circle
+            $Angle = $CurrentPercent * (2*[Math]::PI)
+            $PX = $OriginX + $Radius * [Math]::Cos($Angle)
+            $PY = $OriginY + $Radius * [Math]::Sin($Angle)
+            $L = "$PX,$PY"
+            #Next Arc to other point
+            $CurrentPercent += $Percentage
+            $Angle = $CurrentPercent * (2*[Math]::PI)
+            $PX = $OriginX + $Radius * [Math]::Cos($Angle)
+            $PY = $OriginY + $Radius * [Math]::Sin($Angle)
+            $LA = 0
+            if (($Percentage * (2*[Math]::PI)) -gt [math]::PI) {
+                $LA=1
+            }
+            $A = "$OriginX,$OriginY 0,$LA,1 $PX,$PY"
         
-        $SVG += "M $M L $L A $A Z`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></path>`r`n"
+            $SVG += "M $M L $L A $A Z`" fill=`"$($Colors[$I])`"><title>$($DataPoint.Name): $($DataPoint.Value) ($(($Percentage*100).ToString("N2"))%)</title></path>`r`n"
+        }
     }
 
     #Draw Legend
@@ -806,7 +824,7 @@ function Get-CorrectedHue {
     Number of colors to generate
 #>
 function Get-ColorSpread {
-    Param($Amount, $HueOrigin=0, $HueSpread = 180, $HueStep = 60, [switch]$EvenSpread)
+    Param($Amount, $HueOrigin=0, $HueSpread = 180, $HueStep = 45, [switch]$EvenSpread)
     $HueMin = Get-CorrectedHue -Hue ($HueOrigin - $HueSpread)
 
     $MaxOriginColors = $HueSpread*2/$HueStep
