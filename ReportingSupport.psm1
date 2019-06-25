@@ -753,19 +753,19 @@ function Get-HexColor {
     (
         [parameter(ValueFromPipeline,Mandatory=$true)][System.Drawing.Color[]]$Color, [switch]$IncludeAlpha
     )
-    Process{
-        $ToProcess = $null;
-        if ($_){
-            $ToProcess = $_
-        }
-        else
+    begin
+    {
+        $ToReturn = @()
+    }
+    Process
+    {
+        foreach ($ToProcess in $Color) 
         {
-            $ToProcess = $Color[0]
+            $ToReturn += ("#"+$ToProcess.R.ToString("x2")+$ToProcess.G.ToString("x2")+$ToProcess.B.ToString("x2"))
         }
-        $ToReturn = "#"+$ToProcess.R.ToString("x2")+$ToProcess.G.ToString("x2")+$ToProcess.B.ToString("x2")
-        if ($IncludeAlpha) {
-            $ToReturn=$ToReturn+$ToProcess.A.ToString("x2")
-        }
+    }
+    end
+    {
         return $ToReturn
     }
 }
