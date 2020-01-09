@@ -338,7 +338,15 @@ function New-LineBarChart {
         $Colors = Get-ColorSpread -Amount $DataPoints.Count | Get-HexColor
     }
 
-    $SVG = "<svg viewBox=`"0 0 $ViewBoxWidth $ViewBoxHeight`" height=`"$Height`" width=`"$Width`">`r`n"
+    $HTMLDimensions = ""
+    if ($Height -ne $null) {
+        $HTMLDimensions = " height=`"$Height`""
+    }
+    if ($Width -ne $null) {
+        $HTMLDimensions += " width=`"$Width`""
+    }
+
+    $SVG = "<svg viewBox=`"0 0 $ViewBoxWidth $ViewBoxHeight`"$HTMLDimensions>`r`n"
 
     #Draw BG
     $SVG += "`t<rect x=`"$($ChartPadding/2)`" y=`"$($ChartPadding/2)`" width=`"$($ViewBoxWidth-$ChartPadding)`" height=`"$($ViewBoxHeight-$ChartPadding)`" style=`"fill:$BackgroundColor;stroke-width:1;`" />`r`n"
